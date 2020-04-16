@@ -397,11 +397,13 @@ radius server aaa-vpn_server
 ```
 
 #### IKEv2 configuration
+##### Authorization policy
 The second step is the configuration of IKEv2. At first, a local authorization
 policy *remoteaccess_auth_policy* is built with the default IP settings
 that are pushed to the remote clients. Clients that don't have a static IP
 address in the *radiusFramedIPAddress* LDAP attribute get an IP
-from the local IPv4 pool *pool1*.
+from the local IPv4 pool *pool1*. This authorization policy will be sourced by
+the IKEv2 profile.
 ```
 ip local pool pool1 10.0.0.100 10.0.0.120
 
@@ -414,19 +416,19 @@ crypto ikev2 authorization policy remoteaccess_auth_policy
  route set interface
 ```
 
+##### Proposals and policy
 Then, IKEv2 proposals are built with the selection of crypto algorithms. The technical guidelines for the selection are:
  - [Cisco Next Generation Cryptography](https://tools.cisco.com/security/center/resources/next_generation_cryptography).
  - [CNSA suite](https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites#Commercial-National-Security-Algorithm-CNSA-Suite-Suite-B-Cryptographic-Suites-for-IPsec-RFC-6379).
 
 Unfortunately, major operating systems do not 100% support those guidelines, making difficult
 the creation of a policy that both respects the guidelines and supports all major operating systems.
-A good guide with the algorithms supported by different OS can be found in the
+A good list with the algorithms supported by each OS can be found in the
 [MikroTik wiki](https://wiki.mikrotik.com/wiki/Manual:IP/IPsec#Windows_client_configuration).
 
-Therefore, the choice is to build two different proposals. The first proposal is fully compliant with Cisco NGN, while
-the second one supports also legacy algorithms, which are needed for some operating systems. Then, in the IKEv2 policy,
-the two proposals are listed in order of preference. Inside each proposal, algorithms are listed in order of
-preference.
+Therefore, the choice is to build two different proposals. The first proposal is the "best" option, according to NGN guidelines.
+The second one supports also legacy, but still secure, algorithms, which are needed for some operating systems. T
+hen, in the IKEv2 policy, the two proposals are listed in order of preference.
 ```
 crypto ikev2 proposal ngn-proposal
  encryption aes-gcm-256
@@ -440,15 +442,15 @@ crypto ikev2 policy remoteaccess
  proposal ngn-proposal
  proposal remoteaccess_legacy_proposal
 ```
+
+##### Profile
 At the end, the IKEv2 profile *remoteaccess* is built, which combines all of the above
 settings. In the profile:
- - Server is identified with a TLS certificate, included in the trustpoint *rt1.trustpoint*, which is assumed
-to be already imported in the router. The client is identified with EAP, without the AnyConnect
-proprietary extensions.
- - This profile is then linked to the *Virtual-Template* interface 1.
- - Windows IKEv2 client identifies the user with the local IP address of the machine. Therefore,
- this profile must match any remote identity, and the *query-identity* option is set, such that the server
- explicitly asks for the EAP identity.
+ - The server is identified with a TLS certificate, included in the trustpoint *rt1.trustpoint*, which is assumed
+to be already imported in the router. The client is instead identified with EAP, without AnyConnect proprietary extensions.
+ - The profile is linked to the *Virtual-Template* interface 1.
+ - Unfortunately, the Windows native IKEv2 client identifies itself with the local IP address of the machine, instead of the EAP identity.
+  Therefore, this profile must match any possible remote identity, and the *query-identity* option is set, so that the client provides the EAP identity.
  - IKEv2 fragmentation is globally active.
  - Dead Peer Detection (DPD) is enabled.
 
@@ -494,6 +496,41 @@ interface Virtual-Template1 type tunnel
  no logging event link-status
  tunnel protection ipsec profile remoteaccess
 ```
+
+## Client configuration
+This VPN is tested and compatible with:
+ - Windows 7 (and 8.1, 10) native client;
+ - macOS native client;
+ - iOS and iPadOS native client;
+ - [strongSwan](https://www.strongswan.org/) for GNU/Linux and Android.
+
+Configuration is quite straightforward for all OS. In this section, I collect the most common remarks concerning the configuration
+of the VPN over those OS.
+
+### Windows native client
+By default, Windows does not negotiate strong encryption algorithms (AES256 and DH2048). To achieve this, a registry
+key must be added, following [these instructions](https://wiki.strongswan.org/projects/strongswan/wiki/WindowsClients#AES-256-CBC-and-MODP2048). After the registry
+key is inserted, the VPN can be added from Control Panel. By default, Windows authenticates with EAP-MSCHAPv2, and uses AES with CBC encryption, which is less efficient than GCM algorithms.
+By going in the *Adapter Settings*, EAP-PEAP and EAP-TTLS (only for Windows 10) can be also configured. However, GCM algorithms cannot be chosen from the GUI.
+
+On Windows 10, the best method to configure the VPN is the use of [Set-VpnConnectionIPsecConfiguration](https://docs.microsoft.com/en-us/powershell/module/vpnclient/set-vpnconnectionipsecconfiguration?view=win10-ps)
+PowerShell cmdlet. This allows the use of more efficient GCM algorithms, and avoids the addition of the registry key. For example:
+```
+Add-VpnConnection -Name ExampleVPN -ServerAddress rt.example.com -AuthenticationMethod Eap -DnsSuffix example.com -EncryptionLevel Required -TunnelType Ikev2
+Set-VpnConnectionIPsecConfiguration -ConnectionName "ExampleVPN" -Force -AuthenticationTransformConstants GCMAES256 -CipherTransformConstants GCMAES256 -DHGroup ECP384 -EncryptionMethod GCMAES256 -IntegrityCheckMethod SHA384 -PfsGroup None
+```
+
+### Apple macOS/iOS/iPadOS native client
+Apple OSs support only EAP-MSCHAPv2, and ignore the DNS servers and suffix that are pushed to the clients. Therefore, manual DNS configuration is required at the client side.
+
+### strongSwan
+strongSwan fully supports the VPN. Strong and efficient crypto algorithms can be chosen by selecting the Suite-B-GCM-256 algorithms, without PFS:
+ - IKEv2: aes256gcm16-prfsha384-ecp384
+ - ESP: aes256gcm16
+All distributions supports EAP-MSCHAPv2. Tunneled EAP methods are theoretically supported on GNU/Linux, but we experienced several issues with them. Therefore, we recommend
+the use of MSCHAPv2 over all strongSwan (GNU/Linux and Android) installations.
+
+Some distributions experience PMTU issues, which is a known issue of strongSwan on GNU/Linux (https://wiki.archlinux.org/index.php/StrongSwan).
 
 #### License
 Content is released under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
