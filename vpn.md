@@ -78,8 +78,10 @@ we modified the configuration as follows.
    - EAP-MSCHAPv2
    - EAP-TTLS with PAP
    - EAP-PEAP with MSCHAPv2
+
 In principle, all clients support EAP-MSCHAPv2 authentication. However, we prefer tunneled EAP authentication to protect user passwords from compromises of the router and/or the internal network between router and RADIUS server.
 
+#### Configuration files
 The RADIUS configuration files that were more heavily modified from eduroam's configurations are here reported.
  - `/etc/freeradius/sites-enabled/vpn`:
 ```
@@ -459,7 +461,7 @@ crypto ikev2 fragmentation
 
 crypto ikev2 profile remoteaccess
  match identity remote any
- identity local fqdn rt.inrim.it
+ identity local fqdn rt.example.com
  authentication local rsa-sig
  authentication remote eap query-identity
  pki trustpoint rt1.trustpoint
@@ -525,8 +527,9 @@ Apple OSs support only EAP-MSCHAPv2, and ignore the DNS servers and suffix that 
 
 ### strongSwan
 strongSwan fully supports the VPN. Strong and efficient crypto algorithms can be chosen by selecting the Suite-B-GCM-256 algorithms, without PFS:
- - IKEv2: aes256gcm16-prfsha384-ecp384
- - ESP: aes256gcm16
+ - *IKEv2*: aes256gcm16-prfsha384-ecp384
+ - *ESP*: aes256gcm16
+
 All distributions supports EAP-MSCHAPv2. Tunneled EAP methods are theoretically supported on GNU/Linux, but we experienced several issues with them. Therefore, we recommend
 the use of MSCHAPv2 over all strongSwan (GNU/Linux and Android) installations.
 
