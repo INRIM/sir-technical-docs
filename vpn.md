@@ -303,7 +303,7 @@ ldap {
 	}
 	user {
 		base_dn = "ou=Users,dc=example,dc=com"
-		filter = "(uid=%{%{Stripped-User-Name}:-%{User-Name}})"
+		filter = "(uid=%{\%{Stripped-User-Name}:-%{User-Name}})"
 		sasl {
 		}
 	}
