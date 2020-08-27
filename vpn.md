@@ -141,7 +141,7 @@ server vpn {
     acct_counters64
 
     update request {
-        &FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
+        &FreeRADIUS-Acct-Session-Start-Time = "\%{expr: %l - \%{\%{Acct-Session-Time}:-0} - \%{\%{Acct-Delay-Time}:-0}}"
     }
 
     acct_unique
