@@ -6,7 +6,7 @@ we found little documentation on the integration of a FlexVPN server with an exi
 [FreeRADIUS](https://freeradius.org/) server to allow EAP authentication. Most of documentation found online either used
 Cisco's proprietary client (AnyConnect), an Active Directory-based authentication infrastructure, or certificate-based authentication.
 For this reason, I share here the configuration that we applied, which is far to be optimal. If you have any suggestion, feel free
-to send an e-mail!
+to drop me an e-mail.
 
 ## General overview
 The goal is setting up a standard remote-access VPN. We want that road-warriors (i.e. remote-access clients) access the internal network. Since we also want
@@ -21,14 +21,15 @@ For this guide, we will assume the following network settings:
  * AAA server name: `aaa.example.com`
 
 ## AAA server configuration
-The AAA server provides authentication and authorization for the FlexVPN server using EAP. Optionally, it can also provide
-accounting, but this is left for future investigation.
+The AAA server provides authentication, authorization and accounting for the FlexVPN server using EAP. Accounting is
+performed on a local SQLite3 database, which can be queried to obtain useful information about the VPN (i.e. connections,
+  IP addresses, data used).
 
 The AAA server uses the following software to provide EAP authentication:
  * [OpenLDAP](https://www.openldap.org/) as user database.
  * [FreeRADIUS](https://freeradius.org/) for EAP AAA.
  As Operating System, any modern GNU/Linux distribution is sufficient. For this guide,
- I will use [Debian](https://www.debian.org/) Linux.
+ I will assume [Debian](https://www.debian.org/) Linux.
 
 ### LDAP database
 The first step is the configuration of the OpenLDAP database, which contains the list
@@ -78,8 +79,9 @@ we modified the configuration as follows.
    - EAP-MSCHAPv2
    - EAP-TTLS with PAP
    - EAP-PEAP with MSCHAPv2
+ - We enabled accounting on a local SQLite3 database.
 
-In principle, all clients support EAP-MSCHAPv2 authentication. However, we prefer tunneled EAP authentication to protect user passwords from compromises of the router and/or the internal network between router and RADIUS server.
+In principle, all clients support EAP-MSCHAPv2 authentication. However, we prefer tunneled EAP authentication to further protect user passwords from compromises of the router and/or the internal network between router and RADIUS server.
 
 #### Configuration files
 The RADIUS configuration files that were more heavily modified from eduroam's configurations are here reported.
@@ -135,10 +137,20 @@ server vpn {
 	}
 
 	preacct {
+    preprocess
+    acct_counters64
+
+    update request {
+        &FreeRADIUS-Acct-Session-Start-Time = "%{expr: %l - %{%{Acct-Session-Time}:-0} - %{%{Acct-Delay-Time}:-0}}"
+    }
+
+    acct_unique
+
 		suffix
 	}
 
 	accounting {
+    sql
 	}
 
 	post-auth {
@@ -218,7 +230,6 @@ server vpn-inner-tunnel {
 		Post-Auth-Type REJECT {
 			attr_filter.access_reject
 			reply_log
-			eduroam_inner_log
 
 			update outer.session-state {
 				&Module-Failure-Message := &request:Module-Failure-Message
@@ -374,14 +385,50 @@ ldap {
 	}
 }
 ```
+- `/etc/freeradius/mods-enabled/sql`:
+```
+sql {
+	driver = "rlm_sql_sqlite"
+	sqlite {
+		filename = "/var/lib/radiusd/freeradius.db"
+		busy_timeout = 200
+		bootstrap = "${modconfdir}/${..:name}/main/sqlite/schema.sql"
+	}
+	dialect = "sqlite"
+	radius_db = "radius"
+	acct_table1 = "radacct"
+	acct_table2 = "radacct"
+	postauth_table = "radpostauth"
+	authcheck_table = "radcheck"
+	groupcheck_table = "radgroupcheck"
+	authreply_table = "radreply"
+	groupreply_table = "radgroupreply"
+	usergroup_table = "radusergroup"
+	delete_stale_sessions = yes
+	pool {
+		start = ${thread[pool].start_servers}
+		min = ${thread[pool].min_spare_servers}
+		max = ${thread[pool].max_servers}
+		spare = ${thread[pool].max_spare_servers}
+		uses = 0
+		retry_delay = 30
+		lifetime = 0
+		idle_timeout = 60
+	}
+	client_table = "nas"
+	group_attribute = "SQL-Group"
+	$INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
+}
+```
 
 ## Router configuration
 
 #### AAA configuration
 First step is the configuration of AAA.
 The RADIUS server configured before is thus added to the router with the standard
-commands. The IKEv2 profile will use the authentication login *aaa-vpn_auth*
-and the local authorization group *local-group-author-list*.
+commands. The IKEv2 profile will use the authentication login *aaa-vpn_auth*,
+the local authorization group *local-group-author-list* and the accounting
+*acc_list_radius*.
 ```
 aaa new-model
 
@@ -390,6 +437,7 @@ aaa group server radius aaa-vpn_group
 
 aaa authentication login aaa-vpn_auth group aaa-vpn_group
 aaa authorization network local-group-author-list local
+aaa accounting network acc_list_radius start-stop group aaa-vpn_group
 
 aaa attribute list attr-list1
 
@@ -470,6 +518,7 @@ crypto ikev2 profile remoteaccess
  aaa authentication eap aaa-vpn_auth
  aaa authorization group eap list local-group-author-list remoteaccess_auth_policy
  aaa authorization user eap cached
+ aaa accounting eap acc_list_radius
  virtual-template 1 mode auto
 ```
 
