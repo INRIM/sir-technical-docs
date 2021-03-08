@@ -5,8 +5,7 @@ This potentially allows clients to use any IKEv2-compatible client, e.g. [strong
 we found little documentation on the integration of a FlexVPN server with an existing [OpenLDAP](https://www.openldap.org/)-based authentication infrastructure, using a
 [FreeRADIUS](https://freeradius.org/) server to allow EAP authentication. Most of documentation found online either used
 Cisco's proprietary client (AnyConnect), an Active Directory-based authentication infrastructure, or certificate-based authentication.
-For this reason, I share here the configuration that we applied, which is far to be optimal. If you have any suggestion, feel free
-to drop me an e-mail.
+For this reason, I'm sharing here our configuration.
 
 ## General overview
 The goal is setting up a standard remote-access VPN. We want that road-warriors (i.e. remote-access clients) access the internal network. Since we also want
@@ -585,6 +584,6 @@ the use of MSCHAPv2 over all strongSwan (GNU/Linux and Android) installations.
 Some distributions experience PMTU issues, which is a known issue of strongSwan on GNU/Linux (https://wiki.archlinux.org/index.php/StrongSwan).
 
 #### License
-Content is released under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
+This guide is released under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
 
 ![Creative Commons License](https://i.creativecommons.org/l/by/4.0/88x31.png)
