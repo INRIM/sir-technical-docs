@@ -41,6 +41,7 @@ FreeRADIUS can be configured to use multiple attributes. For this guide, only th
  * **userPassword** as SSHA-hashed password for PAP authentication.
  * **sambaNTPassword** as NT-Password, used for MSCHAPv2 authentication.
  * **radiusFramedIPAddress** as static IP address pushed to the clients (optional).
+ * **radiusReplyAttribute** to send custom (i.e. Cisco-AVPair) attributes for the router (optional).
 
 For this reason, the users will have the *inetOrgPerson* structural schema, along with the *sambaSamAccount* and *radiusprofile* auxiliary schemas.
 Since *sambaSamAccount* requires an attribute *sambaSID*, a random one is generated.
@@ -583,6 +584,14 @@ the use of MSCHAPv2 over all strongSwan (GNU/Linux and Android) installations.
 
 Some distributions experience PMTU issues, which is a known issue of strongSwan on GNU/Linux (https://wiki.archlinux.org/index.php/StrongSwan).
 
+## Appendix: custom router configuration
+The **radiusReplyAttribute** allows pushing custom attributes to the router. The full list of attributes understood by our router, 
+with Cisco IOS 16.9 (Fuji), is available on: https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/sec_conn_ike2vpn/configuration/xe-16-9/sec-flex-vpn-xe-16-9-book/sec-apx-flex-rad.html.
+
+For instance, some attributes that can be pushed are:
+ - `cisco-avpair="ip:interface-config=<interface command>"`: set a custom setting to the user's virtual interface *Virtual-Access*. For instance,
+   an ACL can be applied (`ip access-group ACLNAME in`).
+ - `cisco-avpair="ipsec:route-set=prefix <prefix/length>"`: pushes a custom subnet to the user.
 #### License
 This guide is released under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
 
