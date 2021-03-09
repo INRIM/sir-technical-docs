@@ -113,7 +113,7 @@ systemctl --now enable httpd
 ### Shibboleth SP configuration
 First, get the metadata of your IdP
 ```bash
-curl https://idp.inrim.it/idp/shibboleth > /etc/shibboleth/idp-example-com-local-metadata.xml
+curl https://idp.example.com/idp/shibboleth > /etc/shibboleth/idp-example-com-local-metadata.xml
 ```
 
 Edit the ``/etc/shibboleth/shibboleth2.xml`` file, adding
