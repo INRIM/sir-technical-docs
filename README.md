@@ -5,7 +5,8 @@ of HOWTOs and configuration snippets, of INRiM's ICT
 department (SIR).
 
 ## List of HowTos
-* [Cisco FlexVPN remote access server with FreeRADIUS and OpenLDAP](vpn.md)
+* [Cisco FlexVPN remote access server](vpn.md) with FreeRADIUS and OpenLDAP.
+* [Shibboleth SP GateKeeper](shibboleth-gatekeeper.md) to enable transparent authentication to websites.
 
 ## Contributing
 Contributions are welcome! Feel free to make a pull request with your proposed changes.
