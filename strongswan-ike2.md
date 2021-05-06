@@ -25,7 +25,6 @@ virtual XFRM interface. This allows the use of OSPF to propagate the network of 
 to VPN clients.
 
 ### IP addresses
-
 For this example, we will assume the following IP addresses:
 | Interface | IPv4 address   | IPv6 address     |
 | --------- | ------------   | -------------    |
@@ -159,8 +158,6 @@ connections {
 pools {
 	vpn-pool-ipv4 {
 		addrs = 10.0.0.2-10.0.0.254
-		subnet = 10.0.0.0/24
-		dns = 10.10.0.2, 10.200.1.10
 	}	
 	vpn-pool-ipv6 {
 		addrs = 2001:db8:1:1::/68
