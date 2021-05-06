@@ -112,6 +112,8 @@ if this certificate is different from the RADIUS server's certificate.
 
 Once got the certificate, copy the private key in `/etc/swanctl/rsa`, the X.509 certificate
 in `/etc/swanctl/x509` and the CA certificate in `/etc/swanctl/x509ca`. 
+I assume that the X509 certificate is called `mycert.pem`, and it is issued to `vpn.example.com`, which
+points to the public IPv4 and IPv6 addresses of the server.
 
 Reload and verify that they are successfully loaded:
 ```bash
